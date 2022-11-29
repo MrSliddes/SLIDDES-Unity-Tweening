@@ -1,0 +1,28 @@
+{
+  "name": "com.sliddes.tweening",
+  "version": "1.0.0",
+  "displayName": "SLIDDES Tweening",
+  "description": "For your inbe-tweening needs",
+  "keywords": [
+    "sliddes",
+    "mrsliddes",
+    "tween",
+    "tweening",
+    "animation"
+  ],
+  "author": {
+    "name": "SLIDDES",
+    "email": "info@sliddes.com",
+    "url": "https://www.sliddes.com"
+  },
+  "type": "tool",
+  "unity": "2020.3",
+  "hideInEditor": false,
+  "samples": [
+      {
+          "displayName": "Sample Tweening",
+          "description": "Sample for how to use this package",
+          "path": "Samples~/Sample Tweening"
+      }
+  ]
+}

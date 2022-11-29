@@ -1,0 +1,16 @@
+{
+    "name": "SLIDDES.Tweening.Samples",
+    "rootNamespace": "SLIDDES.Tweening.Samples",
+    "references": [
+        "GUID:2d2e56c63160b3c4fb33fd85f915eeb7"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
