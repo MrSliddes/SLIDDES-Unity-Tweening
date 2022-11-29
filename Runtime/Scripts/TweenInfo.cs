@@ -10,6 +10,31 @@ namespace SLIDDES.Tweening
     /// </summary>
     public class TweenInfo
     {
+        #region Quick Reference Values
+
+        /// <summary>
+        /// The float value of tweenInfo
+        /// </summary>
+        public float Float => values.vector3.x;
+        /// <summary>
+        /// The vector2 value of tweenInfo
+        /// </summary>
+        public Vector2 Vector2 => new Vector2(values.vector3.x, values.vector3.y);
+        /// <summary>
+        /// The vector3 value of tweenInfo
+        /// </summary>
+        public Vector3 Vector3 => values.vector3;
+        /// <summary>
+        /// The gameObject of tweenInfo
+        /// </summary>
+        public GameObject GameObject => values.gameObject;
+        /// <summary>
+        /// The transform of tweenInfo
+        /// </summary>
+        public Transform Transform => values.transform;
+
+        #endregion
+
         public InternalMethods internalMethods;
         /// <summary>
         /// The values of the tweenInfo.
