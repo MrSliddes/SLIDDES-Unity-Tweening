@@ -62,6 +62,7 @@ namespace SLIDDES.Tweening
         /// <returns>True if tweenInfo is finished</returns>
         public bool UpdateValues()
         {
+            if(values.freeFromMemory) return true;
             if(values.hasCompleted) return true;
             if(values.playback == TweenPlayback.paused) return false;
 
@@ -101,6 +102,16 @@ namespace SLIDDES.Tweening
         }
 
         #region TweenInfo Methods
+
+        /// <summary>
+        /// Free the tweenInfo from memory / the update loop
+        /// </summary>
+        /// <returns></returns>
+        public TweenInfo Free()
+        {
+            values.freeFromMemory = true;
+            return this;
+        }
 
         /// <summary>
         /// Set tweenInfo playback to playing
@@ -326,6 +337,10 @@ namespace SLIDDES.Tweening
         /// </summary>
         public class Values
         {
+            /// <summary>
+            /// Can this tweenInfo be freed from memory? If true it will not run further and be removed
+            /// </summary>
+            public bool freeFromMemory;
             /// <summary>
             /// Has the tweenInfo started?
             /// </summary>
