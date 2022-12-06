@@ -84,7 +84,7 @@ namespace SLIDDES.Tweening
             }
 
             // Update the delegate 
-            onUpdateValues();
+            if(onUpdateValues != null) onUpdateValues();
             values.timer -= values.deltaTime;
             values.timeNormalized = (values.time - values.timer) / values.time;
             values.onChange?.Invoke(this);
