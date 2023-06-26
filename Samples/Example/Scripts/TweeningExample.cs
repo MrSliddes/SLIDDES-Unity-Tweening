@@ -22,6 +22,10 @@ namespace SLIDDES.Tweening.Samples
             TweenInfo tweenInfo = Tween.Time(2).OnComplete(x => Debug.Log("Done A"));
             tweenInfo.Free(); // interrupt Done A
             tweenInfo = Tween.Time(2).OnComplete(x => Debug.Log("Done B"));
+
+            Tween.Time(10).OnInterval(1, x => Debug.Log($"Interval {x.values.timer}"));
+
+            Tween.Interval(1, x => Debug.Log("1sec interval"));
         }
 
         // Update is called once per frame

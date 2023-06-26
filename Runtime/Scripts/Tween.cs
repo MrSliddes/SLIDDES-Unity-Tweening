@@ -73,6 +73,25 @@ namespace SLIDDES.Tweening
 
         #region TweenInfo Methods
 
+        /// <summary>
+        /// Trigger an action every x seconds.
+        /// </summary>
+        /// <param name="seconds">Seconds to wait before triggering the action</param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public static TweenInfo Interval(float seconds, Action<TweenInfo> action)
+        {
+            return AddTween(null, null, Vector3.zero, Vector3.zero, -1, GetTweenInfo().OnInterval(seconds, action));
+        }
+
+        /// <summary>
+        /// Move an gameobject from 1 position to the next
+        /// </summary>
+        /// <param name="gameObject"></param>
+        /// <param name="from"></param>
+        /// <param name="to"></param>
+        /// <param name="time"></param>
+        /// <returns></returns>
         public static TweenInfo Move(GameObject gameObject, Vector3 from, Vector3 to, float time)
         {
             return AddTween(gameObject, gameObject.transform, from, to, time, GetTweenInfo().internalMethods.Move());

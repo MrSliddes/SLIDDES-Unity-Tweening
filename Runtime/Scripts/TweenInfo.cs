@@ -54,6 +54,14 @@ namespace SLIDDES.Tweening
         {
             internalMethods = new InternalMethods(this);
             values = new Values();
+            // Stop all coroutines on complete
+            values.onComplete += x => 
+            { 
+                foreach(Coroutine coroutine in values.coroutineIntervals)
+                {
+                    Tween.Instance.StopCoroutine(coroutine);
+                }
+            };
         }
 
         /// <summary>
@@ -85,11 +93,13 @@ namespace SLIDDES.Tweening
 
             // Update the delegate 
             if(onUpdateValues != null) onUpdateValues();
-            values.timer -= values.deltaTime;
+            // Only reduce timer if time was set positive
+            if(values.time > 0) values.timer -= values.deltaTime;
             values.timeNormalized = (values.time - values.timer) / values.time;
             values.onChange?.Invoke(this);
 
-            if(values.timer > 0) return false;
+            // If tweenInfo timer is not done return (or when time was set as negative)
+            if(values.timer > 0 || values.time < 0) return false;
 
             // TweenInfo complete
             values.hasCompleted = true;
@@ -146,6 +156,20 @@ namespace SLIDDES.Tweening
         }
 
         /// <summary>
+        /// Set an interval callback
+        /// </summary>
+        /// <param name="seconds">Seconds to wait before triggering action callback</param>
+        /// <param name="repeating">After triggering the action callback should the interval continue?</param>
+        /// <param name="gameObject">The gameobject that the interval is active on. (For )</param>
+        /// <param name="action">callback</param>
+        /// <returns>TweenInfo</returns>
+        public TweenInfo OnInterval(float seconds, Action<TweenInfo> action)
+        {
+            values.coroutineIntervals.Add(Tween.Instance.StartCoroutine(Interval(seconds, action)));
+            return this;
+        }
+
+        /// <summary>
         /// Callback when the tweenInfo is tarted
         /// </summary>
         /// <param name="action"></param>
@@ -187,6 +211,27 @@ namespace SLIDDES.Tweening
 
         #endregion TweenInfo Methods
 
+
+        /// <summary>
+        /// Sets an ienumerator interval
+        /// </summary>
+        /// <param name="seconds"></param>
+        /// <param name="repeating"></param>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        private IEnumerator Interval(float seconds, Action<TweenInfo> action)
+        {
+            while(true)
+            {
+                yield return new WaitForSeconds(seconds);
+                action.Invoke(this);
+            }
+        }
+
+
+        /// <summary>
+        /// Methods that shoudn't be accessed, but need to be public for Tween
+        /// </summary>
         public class InternalMethods
         {
             private TweenInfo tweenInfo;
@@ -417,6 +462,10 @@ namespace SLIDDES.Tweening
             /// Callback when the tweenInfo transition is complete
             /// </summary>
             public Action<TweenInfo> onComplete;
+            /// <summary>
+            /// The coroutines used for the intervals
+            /// </summary>
+            public List<Coroutine> coroutineIntervals = new List<Coroutine>();
         }
     }
 }
