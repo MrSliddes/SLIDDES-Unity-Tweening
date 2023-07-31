@@ -206,9 +206,6 @@ namespace SLIDDES.Tweening
             tweenInfo.values.gameObject = gameObject;
             tweenInfo.values.transform = transform;
 
-            // Check if already finished
-            if(time <= 0) tweenInfo.UpdateValues();
-
             return tweenInfo;
         }
     }
