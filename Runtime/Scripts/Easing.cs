@@ -5,9 +5,9 @@ using UnityEngine;
 namespace SLIDDES.Tweening
 {
     /// <summary>
-    /// The type a tween is
+    /// What easing is applied to the tween?
     /// </summary>
-    public enum TweenType
+    public enum Easing
     {
         linear, // the default
 

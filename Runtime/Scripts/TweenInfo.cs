@@ -9,55 +9,159 @@ namespace SLIDDES.Tweening
     /// The information about a tween with all its values, that can be used for chaining
     /// </summary>
     public class TweenInfo
-    {
-        #region Quick Reference Values
-
+    {        
+        /// <summary>
+        /// Is this tweenInfo coupled to a gameobject? (If the gameobject reference is lost aka null, the tween will be removed)
+        /// </summary>
+        public bool CoupledToGameObject { get; internal set; }
+        /// <summary>
+        /// Can this tweenInfo be freed from memory? If true it will not run further and be removed
+        /// </summary>
+        public bool FreeFromMemory { get; internal set; }
+        /// <summary>
+        /// Has the tweenInfo started?
+        /// </summary>
+        public bool HasStarted { get; internal set; }
+        /// <summary>
+        /// Has the tweenInfo completed its tween?
+        /// </summary>
+        public bool Completed { get; internal set; }
+        /// <summary>
+        /// Keeps track of how many times this tween has looped
+        /// </summary>
+        public int LoopCount { get; internal set; }
+        /// <summary>
+        /// The amount of times this tweenInfo will loop
+        /// </summary>
+        public int LoopTarget { get; internal set; }
+        /// <summary>
+        /// Keeps track of how many times this tweenInfo has ping ponged its from / to value
+        /// </summary>
+        public int PingPongCount { get; internal set; }
+        /// <summary>
+        /// If > 0 then this tweenInfo, once completed, will go back to the value.from or value.to (depending how many times it already has ping ponged)
+        /// </summary>
+        public int PingPongTarget { get; internal set; }
+        /// <summary>
+        /// The start delay time
+        /// </summary>
+        public float Delay { get; internal set; }
+        /// <summary>
+        /// Time in seconds to wait before updating tweenInfo
+        /// </summary>
+        public float DelayTimer { get; internal set; }
+        /// <summary>
+        /// The deltaTime at which the tweenInfo runs
+        /// </summary>
+        public float DeltaTime { get; internal set; }
         /// <summary>
         /// The float value of tweenInfo
         /// </summary>
-        public float Float => values.vector3.x;
+        public float Float => Vector3.x;
+        /// <summary>
+        /// The start time 
+        /// </summary>
+        public float Time { get; internal set; }
+        /// <summary>
+        /// The time left for this tweenInfo before completion
+        /// </summary>
+        public float Timer { get; internal set; }
+        /// <summary>
+        /// The current time form the tweenInfo between its start (0) to end (1) time normalized (0 to 1)
+        /// </summary>
+        public float TimeNormalized { get; internal set; }
+        /// <summary>
+        /// The current playback of the tween
+        /// </summary>
+        public TweenPlayback Playback { get; internal set; }
+        /// <summary>
+        /// The type of tween this tweenInfo is
+        /// </summary>
+        public Easing Easing { get; internal set; }
+        /// <summary>
+        /// The difference between to - from
+        /// </summary>
+        public Vector3 Difference { get; internal set; }
         /// <summary>
         /// The vector2 value of tweenInfo
         /// </summary>
-        public Vector2 Vector2 => new Vector2(values.vector3.x, values.vector3.y);
+        public Vector2 Vector2 => new Vector2(Vector3.x, Vector3.y);
         /// <summary>
-        /// The vector3 value of tweenInfo
+        /// The current teenInfo vector3 value
         /// </summary>
-        public Vector3 Vector3 => values.vector3;
+        public Vector3 Vector3 { get; internal set; }
         /// <summary>
-        /// The gameObject of tweenInfo
+        /// The value the tweenInfo started in
         /// </summary>
-        public GameObject GameObject => values.gameObject;
+        public Vector3 From { get; internal set; }
         /// <summary>
-        /// The transform of tweenInfo
+        /// The value the tweenInfo needs to be when time <= 0
         /// </summary>
-        public Transform Transform => values.transform;
-
-        #endregion
-
-        public InternalMethods internalMethods;
+        public Vector3 To { get; internal set; }
         /// <summary>
-        /// The values of the tweenInfo.
+        /// The associated gameObject of the tweenInfo
         /// </summary>
-        public Values values;
+        public GameObject GameObject
+        {
+            get
+            {
+                return gameObject;
+            }
+            set
+            {
+                gameObject = value;
+                CoupledToGameObject = gameObject != null;
+                Transform = gameObject.transform;
+            }
+        }
+        /// <summary>
+        /// The transform of gameObject
+        /// </summary>
+        public Transform Transform { get; internal set; }
         /// <summary>
         /// Delegate for callback when updating tweenInfo
         /// </summary>
         public delegate void UpdateDelegate();
 
         /// <summary>
+        /// Callback when the tweenInfo starts
+        /// </summary>
+        internal Action<TweenInfo> onStart;
+        /// <summary>
+        /// Callback when the tweenInfo changes
+        /// </summary>
+        internal Action<TweenInfo> onChange;
+        /// <summary>
+        /// Callback when the tweenInfo transition is complete
+        /// </summary>
+        internal Action<TweenInfo> onComplete;
+        /// <summary>
+        /// When the tween gets destroyed
+        /// </summary>
+        internal Action<TweenInfo> onDestroy;
+        /// <summary>
+        /// The coroutines used for the intervals
+        /// </summary>
+        internal List<Coroutine> coroutineIntervals = new List<Coroutine>();
+
+        /// <summary>
+        /// Is the tweenInfo being forced to complete?
+        /// </summary>
+        private bool forceComplete;
+        /// <summary>
+        /// Gameobject reference of the tween
+        /// </summary>
+        private GameObject gameObject;
+        /// <summary>
         /// When the tweenInfo is updated by tweenInfo.Update() this delegate will be called when it needs to update the tweenInfo values
         /// </summary>
         private UpdateDelegate onUpdateValues;
-        
-        public TweenInfo()
+
+        public TweenInfo() 
         {
-            internalMethods = new InternalMethods(this);
-            values = new Values();
-            // Stop all coroutines on complete
-            values.onComplete += x => 
-            { 
-                foreach(Coroutine coroutine in values.coroutineIntervals)
+            onComplete += x =>
+            {
+                foreach(Coroutine coroutine in coroutineIntervals)
                 {
                     Tween.Instance.StopCoroutine(coroutine);
                 }
@@ -68,46 +172,78 @@ namespace SLIDDES.Tweening
         /// Updates the tweenInfo
         /// </summary>
         /// <returns>True if tweenInfo is finished</returns>
-        public bool UpdateValues()
+        internal bool UpdateValues()
         {
-            if(values.freeFromMemory) return true;
-            if(values.hasCompleted) return true;
-            if(values.playback == TweenPlayback.paused) return false;
+            if(FreeFromMemory) return true;
+            if(Completed) return true;
+            if(Playback == TweenPlayback.paused) return false;
 
             // Start callback
-            if(!values.hasStarted)
+            if(!HasStarted)
             {
-                values.hasStarted = true;
-                values.timer = values.time;
-                values.onStart?.Invoke(this);
+                HasStarted = true;
+                ResetTimer();
+
+                onStart?.Invoke(this);
             }
 
-            values.deltaTime = Time.deltaTime;
+            DeltaTime = UnityEngine.Time.deltaTime;
 
             // Reduce delay
-            if(values.delayTimer > 0)
+            if(DelayTimer > 0)
             {
-                values.delayTimer -= values.deltaTime;
+                DelayTimer -= DeltaTime;
+                return false;
+            }
+
+            // If tweenInfo is coupled to gameobject, check if gameobject still exists
+            if(CoupledToGameObject && GameObject == null)
+            {
+                // Free this tweenInfo from memory
+                Free();
                 return false;
             }
 
             // Update the delegate 
             if(onUpdateValues != null) onUpdateValues();
+
             // Only reduce timer if time was set positive
-            if(values.time > 0) values.timer -= values.deltaTime;
-            values.timeNormalized = (values.time - values.timer) / values.time;
-            values.onChange?.Invoke(this);
+            if(Time > 0) Timer -= DeltaTime;
+            // Calculate time normalized
+            TimeNormalized = Mathf.Clamp01((Time - Timer) / Time);
 
-            // If tweenInfo timer is not done return (or when time was set as negative)
-            if(values.timer > 0 || values.time < 0) return false;
+            // Check if tweenInfo is not done or when time was set as negative
+            if(Timer > 0 || Time < 0)
+            {
+                // Not done
+                onChange?.Invoke(this);
+                return false;
+            }
+            // Done
 
-            // TweenInfo complete
-            values.hasCompleted = true;
-            // Make sure values are dead on
-            values.vector3 = values.to;
-            // Invoke
-            values.onChange?.Invoke(this); // Also invoke onChange!
-            values.onComplete?.Invoke(this);
+            // Check if tweenInfo needs to ping pong
+            if(PingPongTarget < 0 || PingPongCount < PingPongTarget)
+            {
+                // Switch values (ping pong)
+                onChange?.Invoke(this);
+                Vector3 temp = From;
+                From = To;
+                To = temp;
+                ResetTimer();
+                PingPongCount = Mathf.Clamp(PingPongCount + 1, 0, int.MaxValue);
+                return false;
+            }
+
+            // Check if needed to loop
+            if(LoopTarget < 0 || LoopCount < LoopTarget)
+            {
+                // Reset with the loop
+                LoopCount = Mathf.Clamp(LoopCount + 1, 0, int.MaxValue);
+                ResetForLoop();
+                return false;
+            }
+
+            SetCompleted();
             return true;
         }
 
@@ -119,7 +255,59 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public TweenInfo Free()
         {
-            values.freeFromMemory = true;
+            FreeFromMemory = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Force the tweenInfo to complete
+        /// </summary>
+        /// <returns></returns>
+        public void ForceComplete()
+        {
+            forceComplete = true;
+            SetCompleted();
+        }
+
+        /// <summary>
+        /// After completing the tween loop again forever
+        /// </summary>
+        /// <returns></returns>
+        public TweenInfo Loop()
+        {
+            return Loop(-1);
+        }
+
+        /// <summary>
+        /// After completing the tween loop again
+        /// </summary>
+        /// <param name="times">Times to loop</param>
+        /// <returns></returns>
+        public TweenInfo Loop(int times)
+        {
+            LoopTarget = times;
+            return this;
+        }
+
+        /// <summary>
+        /// Ping pong the tweenInfo forever between its from / to value
+        /// </summary>
+        /// <returns></returns>
+        public TweenInfo PingPong()
+        {
+            PingPongTarget = -1;
+            return this;
+        }
+
+        /// <summary>
+        /// Set the times this tweenInfo needs to ping pong between its from value to to value
+        /// </summary>
+        /// <param name="amount">The amount of times the tween info should ping/pong its value (gets added to total ping pong target value)</param>
+        /// <returns></returns>
+        public TweenInfo PingPong(int amount)
+        {
+            amount = Mathf.Clamp(amount, -1, int.MaxValue);
+            PingPongTarget = amount;
             return this;
         }
 
@@ -129,7 +317,7 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public TweenInfo Play()
         {
-            values.playback = TweenPlayback.playing;
+            Playback = TweenPlayback.playing;
             return this;
         }
 
@@ -140,7 +328,18 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public TweenInfo OnChange(Action<TweenInfo> action)
         {
-            values.onChange = action;
+            onChange += action;
+            return this;
+        }
+
+        /// <summary>
+        /// Callback when the tweenInfo gets destoryed by Tween
+        /// </summary>
+        /// <param name="action"></param>
+        /// <returns></returns>
+        public TweenInfo OnDestroy(Action<TweenInfo> action)
+        {
+            onDestroy += action;
             return this;
         }
 
@@ -151,7 +350,7 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public TweenInfo OnComplete(Action<TweenInfo> action)
         {
-            values.onComplete = action;
+            onComplete += action;
             return this;
         }
 
@@ -165,7 +364,7 @@ namespace SLIDDES.Tweening
         /// <returns>TweenInfo</returns>
         public TweenInfo OnInterval(float seconds, Action<TweenInfo> action)
         {
-            values.coroutineIntervals.Add(Tween.Instance.StartCoroutine(Interval(seconds, action)));
+            coroutineIntervals.Add(Tween.Instance.StartCoroutine(Interval(seconds, action)));
             return this;
         }
 
@@ -176,7 +375,7 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public TweenInfo OnStart(Action<TweenInfo> action)
         {
-            values.onStart = action;
+            onStart += action;
             return this;
         }
 
@@ -187,8 +386,8 @@ namespace SLIDDES.Tweening
         /// <returns>TweenInfo</returns>
         public TweenInfo SetDelay(float delay)
         {
-            values.delay = delay;
-            values.delayTimer = delay;
+            Delay = delay;
+            DelayTimer = delay;
             return this;
         }
 
@@ -197,20 +396,176 @@ namespace SLIDDES.Tweening
         /// </summary>
         /// <param name="tweenType">What type of tween it is</param>
         /// <returns>TweenInfo</returns>
-        public TweenInfo SetEase(TweenType tweenType)
+        public TweenInfo SetEase(Easing easing)
         {
-            values.type = tweenType;
+            Easing = easing;
             return this;
         }
 
         public TweenInfo Stop()
         {
-            values.playback = TweenPlayback.paused;
+            Playback = TweenPlayback.paused;
             return this;
         }
 
         #endregion TweenInfo Methods
 
+        #region Internal Methods
+
+        internal Vector3 EasingMethodValue()
+        {
+            // Based on tweenInfo tweenType, get adjustedTimeNormalized back
+            float adjustedTimeNormalized = Easing switch
+            {
+                Easing.linear => TimeNormalized,
+
+                Easing.easeInBack => TweenEasing.EaseInBack(TimeNormalized),
+                Easing.easeOutBack => TweenEasing.EaseOutBack(TimeNormalized),
+                Easing.easeInOutBack => TweenEasing.EaseInOutBack(TimeNormalized),
+
+                Easing.easeInBounce => TweenEasing.EaseInBounce(TimeNormalized),
+                Easing.easeOutBounce => TweenEasing.EaseOutBounce(TimeNormalized),
+                Easing.easeInOutBounce => TweenEasing.EaseInOutBounce(TimeNormalized),
+
+                Easing.easeInCirc => TweenEasing.EaseInCirc(TimeNormalized),
+                Easing.easeOutCirc => TweenEasing.EaseOutCirc(TimeNormalized),
+                Easing.easeInOutCirc => TweenEasing.EaseInOutCirc(TimeNormalized),
+
+                Easing.easeInCubic => TweenEasing.EaseInCubic(TimeNormalized),
+                Easing.easeOutCubic => TweenEasing.EaseOutCubic(TimeNormalized),
+                Easing.easeInOutCubic => TweenEasing.EaseInOutCubic(TimeNormalized),
+
+                Easing.easeInElastic => TweenEasing.EaseInElastic(TimeNormalized),
+                Easing.easeOutElastic => TweenEasing.EaseOutElastic(TimeNormalized),
+                Easing.easeInOutElastic => TweenEasing.EaseInOutElastic(TimeNormalized),
+
+                Easing.easeInExpo => TweenEasing.EaseInExpo(TimeNormalized),
+                Easing.easeOutExpo => TweenEasing.EaseOutExpo(TimeNormalized),
+                Easing.easeInOutExpo => TweenEasing.EaseInOutExpo(TimeNormalized),
+
+                Easing.easeInSine => TweenEasing.EaseInSine(TimeNormalized),
+                Easing.easeOutSine => TweenEasing.EaseOutSine(TimeNormalized),
+                Easing.easeInOutSine => TweenEasing.EaseInOutSine(TimeNormalized),
+
+                Easing.easeInQuart => TweenEasing.EaseInQuart(TimeNormalized),
+                Easing.easeOutQuart => TweenEasing.EaseOutQuart(TimeNormalized),
+                Easing.easeInOutQuart => TweenEasing.EaseInOutQuart(TimeNormalized),
+
+                Easing.easeInQuad => TweenEasing.EaseInQuad(TimeNormalized),
+                Easing.easeOutQuad => TweenEasing.EaseOutQuad(TimeNormalized),
+                Easing.easeInOutQuad => TweenEasing.EaseInOutQuad(TimeNormalized),
+
+                Easing.easeInQuint => TweenEasing.EaseInQuint(TimeNormalized),
+                Easing.easeOutQuint => TweenEasing.EaseOutQuint(TimeNormalized),
+                Easing.easeInOutQuint => TweenEasing.EaseInOutQuint(TimeNormalized),
+
+                _ => TimeNormalized
+            };
+
+            // Return the current value the tween is on
+            return From + (Difference * adjustedTimeNormalized);
+        }
+
+        /// <summary>
+        /// Reset the timer of the tweenInfo to its inital value
+        /// </summary>
+        internal void ResetTimer()
+        {
+            Timer = Time;
+            TimeNormalized = 0;
+            Difference = To - From;
+        }
+
+        internal void ResetForLoop()
+        {
+            ResetTimer();
+            Vector3 = From;
+        }
+
+        internal TweenInfo SetFloat()
+        {
+            onUpdateValues = () => 
+            {
+                Vector3 v = this.Vector3;
+                v.x = EasingMethodValue().x;
+                this.Vector3 = v;
+            };
+            return this;
+        }
+
+        internal TweenInfo SetVector2()
+        {
+            onUpdateValues = () =>
+            {
+                Vector3 v = EasingMethodValue();
+                Vector3 = new Vector3(v.x, v.y, Vector3.z);
+            };
+            return this;
+        }
+
+        internal TweenInfo SetVector3()
+        {
+            onUpdateValues = () => { Vector3 = EasingMethodValue(); };
+            return this;
+        }
+
+        internal TweenInfo Move()
+        {
+            onUpdateValues = () => { Transform.position = EasingMethodValue(); };
+            onComplete += x => { Transform.position = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveX()
+        {
+            onUpdateValues = () => { Transform.position = new Vector3(EasingMethodValue().x, Transform.position.y, Transform.position.z); };
+            onComplete += x => { Transform.position = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveY()
+        {
+            onUpdateValues = () => { Transform.position = new Vector3(Transform.position.x, EasingMethodValue().x, Transform.position.z); };
+            onComplete += x => { Transform.position = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveZ()
+        {
+            onUpdateValues = () => { Transform.position = new Vector3(Transform.position.x, Transform.position.y, EasingMethodValue().z); };
+            onComplete += x => { Transform.position = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveLocal()
+        {
+            onUpdateValues = () => { Transform.localPosition = EasingMethodValue(); };
+            onComplete += x => { Transform.localPosition = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveLocalX()
+        {
+            onUpdateValues = () => { Transform.localPosition = new Vector3(EasingMethodValue().x, Transform.localPosition.y, Transform.localPosition.z); };
+            onComplete += x => { Transform.localPosition = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveLocalY()
+        {
+            onUpdateValues = () => { Transform.localPosition = new Vector3(Transform.localPosition.x, EasingMethodValue().y, Transform.localPosition.z); };
+            onComplete += x => { Transform.localPosition = To; };
+            return this;
+        }
+
+        internal TweenInfo MoveLocalZ()
+        {
+            onUpdateValues = () => { Transform.localPosition = new Vector3(Transform.localPosition.x, Transform.localPosition.y, EasingMethodValue().z); };
+            onComplete += x => { Transform.localPosition = To; };
+            return this;
+        }
+
+        #endregion
 
         /// <summary>
         /// Sets an ienumerator interval
@@ -223,249 +578,24 @@ namespace SLIDDES.Tweening
         {
             while(true)
             {
-                yield return new WaitForSeconds(seconds);
                 action.Invoke(this);
-            }
-        }
-
-
-        /// <summary>
-        /// Methods that shoudn't be accessed, but need to be public for Tween
-        /// </summary>
-        public class InternalMethods
-        {
-            private TweenInfo tweenInfo;
-
-            public InternalMethods(TweenInfo tweenInfo)
-            {
-                this.tweenInfo = tweenInfo;
-            }
-
-            public Vector3 EasingMethodValue()
-            {
-                float timeNormalized = tweenInfo.values.timeNormalized; // shortcut
-
-                // Based on tweenInfo tweenType, get adjustedTimeNormalized back
-                float adjustedTimeNormalized = tweenInfo.values.type switch
-                {
-                    TweenType.linear => timeNormalized,
-
-                    TweenType.easeInBack => TweenEasing.EaseInBack(timeNormalized),
-                    TweenType.easeOutBack => TweenEasing.EaseOutBack(timeNormalized),
-                    TweenType.easeInOutBack => TweenEasing.EaseInOutBack(timeNormalized),
-
-                    TweenType.easeInBounce => TweenEasing.EaseInBounce(timeNormalized),
-                    TweenType.easeOutBounce => TweenEasing.EaseOutBounce(timeNormalized),
-                    TweenType.easeInOutBounce => TweenEasing.EaseInOutBounce(timeNormalized),
-
-                    TweenType.easeInCirc => TweenEasing.EaseInCirc(timeNormalized),
-                    TweenType.easeOutCirc => TweenEasing.EaseOutCirc(timeNormalized),
-                    TweenType.easeInOutCirc => TweenEasing.EaseInOutCirc(timeNormalized),
-
-                    TweenType.easeInCubic => TweenEasing.EaseInCubic(timeNormalized),
-                    TweenType.easeOutCubic => TweenEasing.EaseOutCubic(timeNormalized),
-                    TweenType.easeInOutCubic => TweenEasing.EaseInOutCubic(timeNormalized),
-
-                    TweenType.easeInElastic => TweenEasing.EaseInElastic(timeNormalized),
-                    TweenType.easeOutElastic => TweenEasing.EaseOutElastic(timeNormalized),
-                    TweenType.easeInOutElastic => TweenEasing.EaseInOutElastic(timeNormalized),
-
-                    TweenType.easeInExpo => TweenEasing.EaseInExpo(timeNormalized),
-                    TweenType.easeOutExpo => TweenEasing.EaseOutExpo(timeNormalized),
-                    TweenType.easeInOutExpo => TweenEasing.EaseInOutExpo(timeNormalized),
-
-                    TweenType.easeInSine => TweenEasing.EaseInSine(timeNormalized),
-                    TweenType.easeOutSine => TweenEasing.EaseOutSine(timeNormalized),
-                    TweenType.easeInOutSine => TweenEasing.EaseInOutSine(timeNormalized),
-
-                    TweenType.easeInQuart => TweenEasing.EaseInQuart(timeNormalized),
-                    TweenType.easeOutQuart => TweenEasing.EaseOutQuart(timeNormalized),
-                    TweenType.easeInOutQuart => TweenEasing.EaseInOutQuart(timeNormalized),
-
-                    TweenType.easeInQuad => TweenEasing.EaseInQuad(timeNormalized),
-                    TweenType.easeOutQuad => TweenEasing.EaseOutQuad(timeNormalized),
-                    TweenType.easeInOutQuad => TweenEasing.EaseInOutQuad(timeNormalized),
-
-                    TweenType.easeInQuint => TweenEasing.EaseInQuint(timeNormalized),
-                    TweenType.easeOutQuint => TweenEasing.EaseOutQuint(timeNormalized),
-                    TweenType.easeInOutQuint => TweenEasing.EaseInOutQuint(timeNormalized),
-
-                    _ => timeNormalized
-                };
-
-                // Return the current value the tween is on
-                return tweenInfo.values.from + (tweenInfo.values.difference * adjustedTimeNormalized);
-            }
-
-            public TweenInfo SetFloat()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.vector3.x = EasingMethodValue().x;  };
-                return tweenInfo;
-            }
-
-            public TweenInfo SetVector2()
-            {
-                tweenInfo.onUpdateValues = () =>
-                {
-                    Vector3 v = EasingMethodValue();
-                    tweenInfo.values.vector3.x = v.x;
-                    tweenInfo.values.vector3.y = v.y;
-                };
-                return tweenInfo;
-            }
-
-            public TweenInfo SetVector3()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.vector3 = EasingMethodValue(); };
-                return tweenInfo;
-            }
-
-            public TweenInfo Move()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.position = EasingMethodValue(); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.position = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveX()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.position = new Vector3(EasingMethodValue().x, tweenInfo.values.transform.position.y, tweenInfo.values.transform.position.z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.position = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveY()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.position = new Vector3(tweenInfo.values.transform.position.x, EasingMethodValue().x, tweenInfo.values.transform.position.z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.position = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveZ()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.position = new Vector3(tweenInfo.values.transform.position.x, tweenInfo.values.transform.position.y, EasingMethodValue().z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.position = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveLocal()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.localPosition = EasingMethodValue(); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.localPosition = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveLocalX()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.localPosition = new Vector3(EasingMethodValue().x, tweenInfo.values.transform.localPosition.y, tweenInfo.values.transform.localPosition.z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.localPosition = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveLocalY()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.localPosition = new Vector3(tweenInfo.values.transform.localPosition.x, EasingMethodValue().y, tweenInfo.values.transform.localPosition.z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.localPosition = tweenInfo.values.to; };
-                return tweenInfo;
-            }
-
-            public TweenInfo MoveLocalZ()
-            {
-                tweenInfo.onUpdateValues = () => { tweenInfo.values.transform.localPosition = new Vector3(tweenInfo.values.transform.localPosition.x, tweenInfo.values.transform.localPosition.y, EasingMethodValue().z); };
-                tweenInfo.values.onComplete += x => { tweenInfo.values.transform.localPosition = tweenInfo.values.to; };
-                return tweenInfo;
+                yield return new WaitForSeconds(seconds);
             }
         }
 
         /// <summary>
-        /// Holds all the tweenInfo values that are set / updated
+        /// Called when the tweenInfo is completed
         /// </summary>
-        public class Values
+        private void SetCompleted()
         {
-            /// <summary>
-            /// Can this tweenInfo be freed from memory? If true it will not run further and be removed
-            /// </summary>
-            public bool freeFromMemory;
-            /// <summary>
-            /// Has the tweenInfo started?
-            /// </summary>
-            public bool hasStarted;
-            /// <summary>
-            /// Has the tweenInfo completed its tween?
-            /// </summary>
-            public bool hasCompleted;
-            /// <summary>
-            /// The start delay time
-            /// </summary>
-            public float delay;
-            /// <summary>
-            /// Time in seconds to wait before updating tweenInfo
-            /// </summary>
-            public float delayTimer;
-            /// <summary>
-            /// The deltaTime at which the tweenInfo runs
-            /// </summary>
-            public float deltaTime;
-            /// <summary>
-            /// The start time 
-            /// </summary>
-            public float time;
-            /// <summary>
-            /// The time left for this tweenInfo before completion
-            /// </summary>
-            public float timer;
-            /// <summary>
-            /// The current time form the tweenInfo between its start (0) to end (1) time normalized (0 to 1)
-            /// </summary>
-            public float timeNormalized;
-            /// <summary>
-            /// The current playback of the tween
-            /// </summary>
-            public TweenPlayback playback;
-            /// <summary>
-            /// The type of tween this tweenInfo is
-            /// </summary>
-            public TweenType type;
-            /// <summary>
-            /// The difference between to - from
-            /// </summary>
-            public Vector3 difference;
-            /// <summary>
-            /// The current teenInfo vector3 value
-            /// </summary>
-            public Vector3 vector3;
-            /// <summary>
-            /// The value the tweenInfo started in
-            /// </summary>
-            public Vector3 from;
-            /// <summary>
-            /// The value the tweenInfo needs to be when time <= 0
-            /// </summary>
-            public Vector3 to;
-            /// <summary>
-            /// The associated gameObject of the tweenInfo
-            /// </summary>
-            public GameObject gameObject;
-            /// <summary>
-            /// The transform of gameObject
-            /// </summary>
-            public Transform transform;
-            /// <summary>
-            /// Callback when the tweenInfo starts
-            /// </summary>
-            public Action<TweenInfo> onStart;
-            /// <summary>
-            /// Callback when the tweenInfo changes
-            /// </summary>
-            public Action<TweenInfo> onChange;
-            /// <summary>
-            /// Callback when the tweenInfo transition is complete
-            /// </summary>
-            public Action<TweenInfo> onComplete;
-            /// <summary>
-            /// The coroutines used for the intervals
-            /// </summary>
-            public List<Coroutine> coroutineIntervals = new List<Coroutine>();
+            // TweenInfo complete
+            Completed = true;
+            // Make sure values are dead on
+            Vector3 = To;
+            // Invoke
+            // Prevent stack overflow by checking if forceComplete was called (from an onChange callback)
+            if(!forceComplete) onChange?.Invoke(this);
+            onComplete?.Invoke(this);
         }
     }
 }

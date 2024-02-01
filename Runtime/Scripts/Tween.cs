@@ -57,7 +57,7 @@ namespace SLIDDES.Tweening
             for(int i = 0; i < Instance.tweens.Count; i++)
             {
                 TweenInfo tweenInfo = Instance.tweens[i];
-                if(tweenInfo.UpdateValues())
+                if(tweenInfo == null || tweenInfo.UpdateValues())
                 {
                     Instance.indexesToRemove.Add(i);
                 }
@@ -66,6 +66,7 @@ namespace SLIDDES.Tweening
             // Remove completed tweens (reverse)
             for(int i = Instance.indexesToRemove.Count - 1; i >= 0; i--)
             {
+                Instance.tweens[i].onDestroy?.Invoke(Instance.tweens[i]);
                 Instance.tweens.RemoveAt(Instance.indexesToRemove[i]);
             }
             Instance.indexesToRemove.Clear();
@@ -81,7 +82,11 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public static TweenInfo Interval(float seconds, Action<TweenInfo> action)
         {
-            return AddTween(null, null, Vector3.zero, Vector3.zero, -1, GetTweenInfo().OnInterval(seconds, action));
+            TweenInfo t = new TweenInfo();
+            t.Time = -1;
+            t.OnInterval(seconds, action);
+            AddTweenInfo(t);
+            return t;
         }
 
         /// <summary>
@@ -94,52 +99,112 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public static TweenInfo Move(GameObject gameObject, Vector3 from, Vector3 to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, from, to, time, GetTweenInfo().internalMethods.Move());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = from;
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.Move();
         }
 
         public static TweenInfo MoveX(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(from, 0, 0), new Vector3(to, 0, 0), time, GetTweenInfo().internalMethods.MoveX());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(from, 0, 0);
+            t.To = new Vector3(to, 0, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveX();
         }
 
         public static TweenInfo MoveY(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(0, from, 0), new Vector3(0, to, 0), time, GetTweenInfo().internalMethods.MoveY());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(0, from, 0);
+            t.To = new Vector3(0, to, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveY();
         }
 
         public static TweenInfo MoveZ(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(0, 0, from), new Vector3(0, 0, to), time, GetTweenInfo().internalMethods.MoveZ());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(0, 0, from);
+            t.To = new Vector3(0, 0, to);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveZ();
         }
 
         public static TweenInfo MoveLocal(GameObject gameObject, Vector3 from, Vector3 to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, from, to, time, GetTweenInfo().internalMethods.MoveLocal());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = from;
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveLocal();
         }
 
         public static TweenInfo MoveLocalX(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(from, 0, 0), new Vector3(to, 0, 0), time, GetTweenInfo().internalMethods.MoveLocalX());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(from, 0, 0);
+            t.To = new Vector3(to, 0, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveLocalX();
         }
 
         public static TweenInfo MoveLocalY(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(0, from, 0), new Vector3(0, to, 0), time, GetTweenInfo().internalMethods.MoveLocalY());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(0, from, 0);
+            t.To = new Vector3(0, to, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveLocalY();
         }
 
         public static TweenInfo MoveLocalZ(GameObject gameObject, float from, float to, float time)
         {
-            return AddTween(gameObject, gameObject.transform, new Vector3(0, 0, from), new Vector3(0, 0, to), time, GetTweenInfo().internalMethods.MoveLocalZ());
+            TweenInfo t = new TweenInfo();
+            t.GameObject = gameObject;
+            t.From = new Vector3(0, 0, from);
+            t.To = new Vector3(0, 0, to);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveLocalZ();
         }
 
         public static TweenInfo Move(Transform transform, Vector3 from, Vector3 to, float time)
         {
-            return AddTween(null, transform, from, to, time, GetTweenInfo().internalMethods.Move());
+            TweenInfo t = new TweenInfo();
+            t.Transform = transform;
+            t.From = from;
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.Move();
         }
 
         public static TweenInfo MoveLocal(Transform transform, Vector3 from, Vector3 to, float time)
         {
-            return AddTween(null, transform, from, to, time, GetTweenInfo().internalMethods.MoveLocal());
+            TweenInfo t = new TweenInfo();
+            t.Transform = transform;
+            t.From = from;
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.MoveLocal();
         }
 
         /// <summary>
@@ -149,64 +214,57 @@ namespace SLIDDES.Tweening
         /// <returns></returns>
         public static TweenInfo Time(float time)
         {
-            return AddTween(null, null, Vector3.zero, Vector3.zero, time, GetTweenInfo());
+            TweenInfo t = new TweenInfo();
+            t.Time = time;
+            AddTweenInfo(t);
+            return t;
         }
 
         public static TweenInfo Value(int from, float to, float time)
         {
-            return AddTween(null, null, new Vector3(from, 0, 0), new Vector3(to, 0, 0), time, GetTweenInfo().internalMethods.SetFloat());
+            TweenInfo t = new TweenInfo();
+            t.From = new Vector3(from, 0, 0);
+            t.To = new Vector3(to, 0, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.SetFloat();
         }
 
         public static TweenInfo Value(float from, float to, float time)
         {
-            return AddTween(null, null, new Vector3(from, 0, 0), new Vector3(to, 0, 0), time, GetTweenInfo().internalMethods.SetFloat());
+            TweenInfo t = new TweenInfo();
+            t.From = new Vector3(from, 0, 0);
+            t.To = new Vector3(to, 0, 0);
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.SetFloat();
         }
 
         public static TweenInfo Value(Vector2 from, Vector3 to, float time)
         {
-            return AddTween(null, null, from, to, time, GetTweenInfo().internalMethods.SetVector2());            
+            TweenInfo t = new TweenInfo();
+            t.From = from;
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.SetVector2();         
         }
 
         public static TweenInfo Value(Vector3 from, Vector3 to, float time)
         {
-            return AddTween(null, null, from, to, time, GetTweenInfo().internalMethods.SetVector3());
+            TweenInfo t = new TweenInfo();
+            t.From= from; 
+            t.To = to;
+            t.Time = time;
+            AddTweenInfo(t);
+            return t.SetVector3();
         }
                 
         #endregion
 
-
-        /// <summary>
-        /// Get a tween info class to use
-        /// </summary>
-        /// <returns>TweenInfo</returns>
-        private static TweenInfo GetTweenInfo()
+        private static void AddTweenInfo(TweenInfo tweenInfo)
         {
-            TweenInfo tweenInfo = new TweenInfo();
             Instance.tweens.Add(tweenInfo);
-            return tweenInfo;
-        }
-
-        /// <summary>
-        /// Add the tween to the update loop
-        /// </summary>
-        /// <param name="gameObject"></param>
-        /// <param name="transform"></param>
-        /// <param name="from"></param>
-        /// <param name="to"></param>
-        /// <param name="time"></param>
-        /// <param name="tweenInfo"></param>
-        /// <returns></returns>
-        private static TweenInfo AddTween(GameObject gameObject, Transform transform, Vector3 from, Vector3 to, float time, TweenInfo tweenInfo)
-        {
-            // Set values
-            tweenInfo.values.from = from;
-            tweenInfo.values.to = to;
-            tweenInfo.values.difference = to - from;
-            tweenInfo.values.time = time;
-            tweenInfo.values.gameObject = gameObject;
-            tweenInfo.values.transform = transform;
-
-            return tweenInfo;
         }
     }
 }

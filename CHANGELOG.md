@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0] - 31/01/2023
+### Added
+- TweenInfo().PingPong method
+- TweenInfo().Loop method
+- TweenInfo().ForceComplete method
+## Changed
+- Updated internal structure of tweening
+
 ## [1.2.1] - 31/07/2023
 ### Fixed
 - Removed bug that caused no callback on onChange and onComplete when time was set to 0
